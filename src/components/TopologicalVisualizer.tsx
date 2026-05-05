@@ -16,12 +16,15 @@ export const TopologicalVisualizer: React.FC<Props> = ({ data, activeId }) => {
     const svg = d3.select(svgRef.current);
     svg.selectAll("*").remove();
 
-    const width = svgRef.current.clientWidth;
-    const height = svgRef.current.clientHeight;
+    const width = svgRef.current.clientWidth || 300;
+    const height = svgRef.current.clientHeight || 300;
     const margin = { top: 20, right: 20, bottom: 40, left: 40 };
 
     const xExtent = d3.extent(data, (d: ReactionData) => d.x) as [number, number];
     const yExtent = d3.extent(data, (d: ReactionData) => d.y) as [number, number];
+
+    // Check for valid extents
+    if (xExtent[0] === undefined || yExtent[0] === undefined) return;
 
     const xScale = d3.scaleLinear()
       .domain([xExtent[0] * 0.9, xExtent[1] * 1.1])
@@ -30,6 +33,9 @@ export const TopologicalVisualizer: React.FC<Props> = ({ data, activeId }) => {
     const yScale = d3.scaleLinear()
       .domain([yExtent[0] * 0.9, yExtent[1] * 1.1])
       .range([height - margin.bottom, margin.top]);
+
+    // Check for NaN scales
+    if (isNaN(xScale(xExtent[0])) || isNaN(yScale(yExtent[0]))) return;
 
     // Grid lines
     svg.append("g")

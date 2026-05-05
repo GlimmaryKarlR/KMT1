@@ -20,17 +20,33 @@ export default function App() {
   const [loading, setLoading] = useState(false);
   const [aiReport, setAiReport] = useState<string>('');
   const [isGeneratingAi, setIsGeneratingAi] = useState(false);
+  const [isDatasetDownloading, setIsDatasetDownloading] = useState(false);
 
   // Initialize data
   useEffect(() => {
     fetch('/api/kinematics')
-      .then(res => res.json())
-      .then(setKinematics)
-      .catch(console.error);
+      .then(res => {
+        if (res.status === 503) {
+           setIsDatasetDownloading(true);
+           throw new Error('Dataset downloading');
+        }
+        return res.json();
+      })
+      .then(data => {
+        if (Array.isArray(data)) {
+          setKinematics(data);
+          setIsDatasetDownloading(false);
+        } else {
+          console.error('Kinematics data error:', data);
+        }
+      })
+      .catch(err => {
+        if (err.message !== 'Dataset downloading') console.error(err);
+      });
     
     // Initial fetch for ID 0
     handleSearch(0);
-  }, []);
+  }, [handleSearch]);
 
   const handleSearch = useCallback(async (id?: number) => {
     const targetId = id !== undefined ? id : parseInt(searchId);
@@ -43,13 +59,17 @@ export default function App() {
         fetch(`/api/neighborhood/${targetId}`).then(res => res.json())
       ]);
 
-      if (reactionRes.error) {
-        console.error(reactionRes.error);
-        return;
+      if (reactionRes && !reactionRes.error) {
+        setCurrentReaction(reactionRes);
+      } else {
+        console.error('Reaction data error:', reactionRes);
       }
 
-      setCurrentReaction(reactionRes);
-      setNeighborhood(neighborsRes);
+      if (Array.isArray(neighborsRes)) {
+        setNeighborhood(neighborsRes);
+      } else {
+        console.error('Neighborhood data error:', neighborsRes);
+      }
       
       // Reset AI report
       setAiReport('');
@@ -155,7 +175,7 @@ export default function App() {
             <h2 className="text-[10px] font-sans font-bold uppercase mb-3 tracking-widest text-editorial-ink/60">Quantum Correlations</h2>
             <p className="text-[11px] leading-relaxed italic text-justify text-editorial-ink/80 font-serif">
               Unseen resonance patterns detected at t={currentReaction?.t || 'N/A'}. 
-              The stereo-electronic angle (θ={currentReaction?.th.toFixed(3) || '0.000'}) 
+              The stereo-electronic angle (θ={currentReaction?.th?.toFixed(3) || '0.000'}) 
               suggests a non-trivial rotation in latent space not present in standard 3D projections.
             </p>
           </div>
@@ -164,13 +184,26 @@ export default function App() {
         {/* Center Column: Visualizer & Table */}
         <section className="md:col-span-6 flex flex-col gap-8">
           <div className="flex-1 min-h-[400px] border-2 border-editorial-ink bg-editorial-ink relative group">
+            {isDatasetDownloading && (
+              <div className="absolute inset-0 z-30 flex flex-col items-center justify-center bg-editorial-bg/95 p-8 text-center">
+                 <div className="w-16 h-16 border-4 border-editorial-ink border-t-editorial-highlight rounded-full animate-spin mb-6" />
+                 <h3 className="text-2xl font-serif italic font-bold text-editorial-ink">Initializing Manifold Dataset...</h3>
+                 <p className="text-xs font-mono opacity-60 mt-4 max-w-xs mx-auto leading-relaxed">
+                   The 167MB Chemical Topology Mesh (KMT_REACTION_01) is being synchronized. 
+                   This high-resolution chemical space map requires localized caching before analysis.
+                 </p>
+                 <div className="mt-8 px-4 py-2 border border-editorial-ink/20 font-mono text-[9px] uppercase tracking-widest opacity-40 animate-pulse">
+                   Source: Zenodo/19376238
+                 </div>
+              </div>
+            )}
             <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'radial-gradient(var(--color-editorial-bg) 1px, transparent 1px)', backgroundSize: '16px 16px' }}></div>
             <TopologicalVisualizer 
               data={neighborhood.length > 0 ? neighborhood : kinematics} 
               activeId={currentReaction?.t} 
             />
             <div className="absolute bottom-4 left-4 bg-editorial-bg text-editorial-ink px-2 py-1 border border-editorial-ink pointer-events-none">
-              <span className="text-[9px] font-mono uppercase font-bold tracking-tighter italic">Normal Vector: [{currentReaction?.Nx.toFixed(2) || '0.00'}, {currentReaction?.Ny.toFixed(2) || '0.00'}, {currentReaction?.Nz.toFixed(2) || '0.00'}]</span>
+              <span className="text-[9px] font-mono uppercase font-bold tracking-tighter italic">Normal Vector: [{currentReaction?.Nx?.toFixed(2) || '0.00'}, {currentReaction?.Ny?.toFixed(2) || '0.00'}, {currentReaction?.Nz?.toFixed(2) || '0.00'}]</span>
             </div>
           </div>
 
