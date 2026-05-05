@@ -1,0 +1,6 @@
+{
+  "name": "KMT Reaction Manifold Analyzer",
+  "description": "Scientific analysis tool for the 12D KMT chemical reaction manifold (1.44M reactions). Provides topological origin analysis, reaction kinetics, and emergent property detection using latent chemical space coordinates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["Data Visualization", "Scientific Computing", "AI Pattern Recognition"]
+}
